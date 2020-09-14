@@ -2,7 +2,7 @@
 # requirements
 # requests, feedparser, traceback, Pillow
 
-from Tkinter import *
+from tkinter import *
 import locale
 import threading
 import time
@@ -10,9 +10,17 @@ import requests
 import json
 import traceback
 import feedparser
+import os
 
 from PIL import Image, ImageTk
 from contextlib import contextmanager
+
+import matplotlib
+matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+from GoogleWeather.GoogleWeather import GoogleWeatherAPI
 
 LOCALE_LOCK = threading.Lock()
 
@@ -20,15 +28,11 @@ ui_locale = '' # e.g. 'fr_FR' fro French, '' as default
 time_format = 12 # 12 or 24
 date_format = "%b %d, %Y" # check python doc for strftime() for options
 news_country_code = 'us'
-weather_api_token = '<TOKEN>' # create account at https://darksky.net/dev/
-weather_lang = 'en' # see https://darksky.net/dev/docs/forecast for full list of language parameters values
-weather_unit = 'us' # see https://darksky.net/dev/docs/forecast for full list of unit parameters values
-latitude = None # Set this if IP location lookup does not work for you (must be a string)
-longitude = None # Set this if IP location lookup does not work for you (must be a string)
-xlarge_text_size = 94
+weather_region = 'Redwood City'
+xlarge_text_size = 50
 large_text_size = 48
 medium_text_size = 28
-small_text_size = 18
+small_text_size = 12
 
 @contextmanager
 def setlocale(name): #thread proof function to work with locale
@@ -42,7 +46,7 @@ def setlocale(name): #thread proof function to work with locale
 # maps open weather icons to
 # icon reading is not impacted by the 'lang' parameter
 icon_lookup = {
-    'clear-day': "assets/Sun.png",  # clear sky day
+    'Clear': "assets/Sun.png",  # clear sky day
     'wind': "assets/Wind.png",   #wind
     'cloudy': "assets/Cloud.png",  # cloudy day
     'partly-cloudy-day': "assets/PartlySunny.png",  # partly cloudy day
@@ -61,14 +65,17 @@ icon_lookup = {
 class Clock(Frame):
     def __init__(self, parent, *args, **kwargs):
         Frame.__init__(self, parent, bg='black')
+
         # initialize time label
         self.time1 = ''
         self.timeLbl = Label(self, font=('Helvetica', large_text_size), fg="white", bg="black")
         self.timeLbl.pack(side=TOP, anchor=E)
+
         # initialize day of week
         self.day_of_week1 = ''
         self.dayOWLbl = Label(self, text=self.day_of_week1, font=('Helvetica', small_text_size), fg="white", bg="black")
         self.dayOWLbl.pack(side=TOP, anchor=E)
+
         # initialize date label
         self.date1 = ''
         self.dateLbl = Label(self, text=self.date1, font=('Helvetica', small_text_size), fg="white", bg="black")
@@ -97,81 +104,74 @@ class Clock(Frame):
             # calls itself every 200 milliseconds
             # to update the time display as needed
             # could use >200 ms, but display gets jerky
-            self.timeLbl.after(200, self.tick)
+                self.timeLbl.after(200, self.tick)
 
 
 class Weather(Frame):
     def __init__(self, parent, *args, **kwargs):
         Frame.__init__(self, parent, bg='black')
+        self.google_weather = GoogleWeatherAPI()
         self.temperature = ''
         self.forecast = ''
         self.location = ''
         self.currently = ''
         self.icon = ''
+
+        self.temperatureLbl = Label(self, font=('Helvetica', xlarge_text_size), fg="white", bg="black")
+        self.temperatureLbl.pack(side=TOP, anchor=W)
+
         self.degreeFrm = Frame(self, bg="black")
         self.degreeFrm.pack(side=TOP, anchor=W)
-        self.temperatureLbl = Label(self.degreeFrm, font=('Helvetica', xlarge_text_size), fg="white", bg="black")
-        self.temperatureLbl.pack(side=LEFT, anchor=N)
+        self.currentlyLbl = Label(self.degreeFrm, font=('Helvetica', medium_text_size), fg="white", bg="black")
+        self.currentlyLbl.pack(side=LEFT, anchor=N)
         self.iconLbl = Label(self.degreeFrm, bg="black")
-        self.iconLbl.pack(side=LEFT, anchor=N, padx=20)
-        self.currentlyLbl = Label(self, font=('Helvetica', medium_text_size), fg="white", bg="black")
-        self.currentlyLbl.pack(side=TOP, anchor=W)
+        self.iconLbl.pack(side=TOP, anchor=W, padx=10)
+
         self.forecastLbl = Label(self, font=('Helvetica', small_text_size), fg="white", bg="black")
         self.forecastLbl.pack(side=TOP, anchor=W)
         self.locationLbl = Label(self, font=('Helvetica', small_text_size), fg="white", bg="black")
         self.locationLbl.pack(side=TOP, anchor=W)
         self.get_weather()
 
-    def get_ip(self):
-        try:
-            ip_url = "http://jsonip.com/"
-            req = requests.get(ip_url)
-            ip_json = json.loads(req.text)
-            return ip_json['ip']
-        except Exception as e:
-            traceback.print_exc()
-            return "Error: %s. Cannot get ip." % e
+        # Plot future Data
+        self.plot_frame = Frame(self, bg="black")
+        self.plot_frame.pack(side=TOP, anchor=W)
+        self.dummy_y = [2, 2, 4, 4, 5, 4, 3]
+        self.MakeForecastPlot(self.dummy_y, side=BOTTOM, fill=BOTH)
+
+    def MakeForecastPlot(self, forecast_data_c, side, fill):
+
+        self.dummy_x = range(7)
+        fig = plt.figure(figsize=(5, 3), facecolor='black')
+        plt.plot(self.dummy_x, forecast_data_c, linewidth=2, markersize=6, color='white', markeredgecolor='white')
+        plt.gca().patch.set_facecolor('black')
+
+        plt.xticks(range(7), ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                   rotation=45)
+        plt.gca().spines['bottom'].set_color('white')
+        plt.gca().tick_params(axis='x', colors='white')
+        plt.tight_layout()
+        canvas = FigureCanvasTkAgg(fig, self.plot_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=side, fill=fill, expand=True)
 
     def get_weather(self):
         try:
 
-            if latitude is None and longitude is None:
-                # get location
-                location_req_url = "http://freegeoip.net/json/%s" % self.get_ip()
-                r = requests.get(location_req_url)
-                location_obj = json.loads(r.text)
-
-                lat = location_obj['latitude']
-                lon = location_obj['longitude']
-
-                location2 = "%s, %s" % (location_obj['city'], location_obj['region_code'])
-
-                # get weather
-                weather_req_url = "https://api.darksky.net/forecast/%s/%s,%s?lang=%s&units=%s" % (weather_api_token, lat,lon,weather_lang,weather_unit)
-            else:
-                location2 = ""
-                # get weather
-                weather_req_url = "https://api.darksky.net/forecast/%s/%s,%s?lang=%s&units=%s" % (weather_api_token, latitude, longitude, weather_lang, weather_unit)
-
-            r = requests.get(weather_req_url)
-            weather_obj = json.loads(r.text)
+            weather_data = self.google_weather.GetDataFromRegion(weather_region)
 
             degree_sign= u'\N{DEGREE SIGN}'
-            temperature2 = "%s%s" % (str(int(weather_obj['currently']['temperature'])), degree_sign)
-            currently2 = weather_obj['currently']['summary']
-            forecast2 = weather_obj["hourly"]["summary"]
+            temperature_c = weather_data['temp_c']
+            currently2 = weather_data['weather_now'].title()
+            forecast2 = None
 
-            icon_id = weather_obj['currently']['icon']
-            icon2 = None
-
-            if icon_id in icon_lookup:
-                icon2 = icon_lookup[icon_id]
+            icon2 = icon_lookup[currently2] if currently2 in icon_lookup else None
 
             if icon2 is not None:
                 if self.icon != icon2:
                     self.icon = icon2
                     image = Image.open(icon2)
-                    image = image.resize((100, 100), Image.ANTIALIAS)
+                    image = image.resize((30, 30), Image.ANTIALIAS)
                     image = image.convert('RGB')
                     photo = ImageTk.PhotoImage(image)
 
@@ -187,25 +187,23 @@ class Weather(Frame):
             if self.forecast != forecast2:
                 self.forecast = forecast2
                 self.forecastLbl.config(text=forecast2)
-            if self.temperature != temperature2:
-                self.temperature = temperature2
-                self.temperatureLbl.config(text=temperature2)
-            if self.location != location2:
-                if location2 == ", ":
+            if self.temperature != temperature_c:
+                self.temperature = temperature_c
+                temperature_f = self.google_weather.CelsiusToFarenheit(temperature_c)
+                temperature_string = '%i°C / %i°F' % (temperature_c, temperature_f)
+                self.temperatureLbl.config(text=temperature_string)
+            if self.location != weather_region:
+                if weather_region == ", ":
                     self.location = "Cannot Pinpoint Location"
                     self.locationLbl.config(text="Cannot Pinpoint Location")
                 else:
-                    self.location = location2
-                    self.locationLbl.config(text=location2)
+                    self.location = weather_region
+                    self.locationLbl.config(text=weather_region)
         except Exception as e:
             traceback.print_exc()
-            print "Error: %s. Cannot get weather." % e
+            print("Error: %s. Cannot get weather." % e)
 
         self.after(600000, self.get_weather)
-
-    @staticmethod
-    def convert_kelvin_to_fahrenheit(kelvin_temp):
-        return 1.8 * (kelvin_temp - 273) + 32
 
 
 class News(Frame):
@@ -236,7 +234,7 @@ class News(Frame):
                 headline.pack(side=TOP, anchor=W)
         except Exception as e:
             traceback.print_exc()
-            print "Error: %s. Cannot get news." % e
+            print("Error: %s. Cannot get news.") % e
 
         self.after(600000, self.get_headlines)
 
@@ -295,19 +293,24 @@ class FullscreenWindow:
     def __init__(self):
         self.tk = Tk()
         self.tk.configure(background='black')
-        self.topFrame = Frame(self.tk, background = 'black')
-        self.bottomFrame = Frame(self.tk, background = 'black')
-        self.topFrame.pack(side = TOP, fill=BOTH, expand = YES)
-        self.bottomFrame.pack(side = BOTTOM, fill=BOTH, expand = YES)
+        self.topFrame = Frame(self.tk, background='black')
+        self.bottomFrame = Frame(self.tk, background='black')
+        self.topFrame.pack(side=TOP, fill=BOTH, expand=YES)
+        self.bottomFrame.pack(side=BOTTOM, fill=BOTH, expand=YES)
         self.state = False
+
+        # Set keys to maximize or minimize window
         self.tk.bind("<Return>", self.toggle_fullscreen)
         self.tk.bind("<Escape>", self.end_fullscreen)
+
         # clock
         self.clock = Clock(self.topFrame)
         self.clock.pack(side=RIGHT, anchor=N, padx=100, pady=60)
+
         # weather
         self.weather = Weather(self.topFrame)
         self.weather.pack(side=LEFT, anchor=N, padx=100, pady=60)
+
         # news
         self.news = News(self.bottomFrame)
         self.news.pack(side=LEFT, anchor=S, padx=100, pady=60)
@@ -325,6 +328,12 @@ class FullscreenWindow:
         self.tk.attributes("-fullscreen", False)
         return "break"
 
+
 if __name__ == '__main__':
+
+    if os.environ.get('DISPLAY', '') == '':
+        print('no display found. Using :0.0')
+        os.environ.__setitem__('DISPLAY', ':0.0')
+
     w = FullscreenWindow()
     w.tk.mainloop()
