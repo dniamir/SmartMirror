@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from GoogleWeather.GoogleWeather import GoogleWeatherAPI
+from SurflineScrapper.SurflineScraper import SurflineScraper
 
 LOCALE_LOCK = threading.Lock()
 
@@ -30,10 +31,14 @@ time_format = 12 # 12 or 24
 date_format = "%b %d, %Y" # check python doc for strftime() for options
 news_country_code = 'us'
 weather_region = 'Redwood City'
+surf_region = 'OCEAN_BEACH_OVERVIEW'
 xlarge_text_size = 50
 large_text_size = 48
 medium_text_size = 28
 small_text_size = 12
+
+FRAME_DEBUG = {'highlightbackground': "white",
+               'highlightthickness': 1}
 
 @contextmanager
 def setlocale(name): #thread proof function to work with locale
@@ -69,17 +74,17 @@ class Clock(Frame):
 
         # initialize time label
         self.time1 = ''
-        self.timeLbl = Label(self, font=('Helvetica', large_text_size), fg="white", bg="black")
+        self.timeLbl = Label(self, font=('Helvetica', large_text_size), fg="white", bg="black", **FRAME_DEBUG)
         self.timeLbl.pack(side=TOP, anchor=E)
 
         # initialize day of week
         self.day_of_week1 = ''
-        self.dayOWLbl = Label(self, text=self.day_of_week1, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.dayOWLbl = Label(self, text=self.day_of_week1, font=('Helvetica', small_text_size), fg="white", bg="black", **FRAME_DEBUG)
         self.dayOWLbl.pack(side=TOP, anchor=E)
 
         # initialize date label
         self.date1 = ''
-        self.dateLbl = Label(self, text=self.date1, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.dateLbl = Label(self, text=self.date1, font=('Helvetica', small_text_size), fg="white", bg="black", **FRAME_DEBUG)
         self.dateLbl.pack(side=TOP, anchor=E)
         self.tick()
 
@@ -108,9 +113,63 @@ class Clock(Frame):
                 self.timeLbl.after(200, self.tick)
 
 
+class Surf(Frame):
+    def __init__(self, parent, *args, **kwargs):
+        Frame.__init__(self, parent, bg='black', **FRAME_DEBUG)
+        self.surfline = SurflineScraper()
+        self.temperature = ''
+        self.icon = ''
+        
+        # Initialize variables to later be updated
+        self.dummy_x = None
+        self.x_ticks = None
+        self.ax = None
+        self.canvas = None
+        self.fig = None
+        
+        # Plot future Data
+        self.plot_frame = Frame(self, bg="black", **FRAME_DEBUG)
+        self.plot_frame.pack(side=TOP, anchor=W)
+        self.surf_data = None
+        self.MakeForecastPlot()
+    
+    def MakeForecastPlot(self):
+        
+        first_time = self.canvas is None
+                
+        surf_data = self.surfline.GetData(surf_region)
+        
+        self.surf_data = surf_data
+        
+        if first_time:
+            self.fig = plt.figure(figsize=(5, 3), facecolor='black')
+        else:
+            self.ax.clear()
+        
+        self.surfline.PlotSurfResults(surf_region)
+        
+        self.ax = plt.gca()
+        ax = self.ax
+        ax.patch.set_facecolor('black')
+
+        ax.spines['bottom'].set_color('white')
+        ax.spines['left'].set_color('white')
+        ax.tick_params(axis='x', colors='white')
+        ax.tick_params(axis='y', colors='white')
+        
+        if first_time:
+            plt.tight_layout()
+            self.canvas = FigureCanvasTkAgg(self.fig, self.plot_frame)
+            self.canvas.get_tk_widget().pack(side=BOTTOM, fill=BOTH,
+                                             expand=True)
+        
+        self.canvas.draw()
+        self.after(600000, self.MakeForecastPlot)
+
+
 class Weather(Frame):
     def __init__(self, parent, *args, **kwargs):
-        Frame.__init__(self, parent, bg='black')
+        Frame.__init__(self, parent, bg='black', **FRAME_DEBUG)
         self.google_weather = GoogleWeatherAPI()
         self.temperature = ''
         self.forecast = ''
@@ -125,24 +184,27 @@ class Weather(Frame):
         self.canvas = None
         self.fig = None
 
-        self.temperatureLbl = Label(self, font=('Helvetica', xlarge_text_size), fg="white", bg="black")
+        self.temperatureLbl = Label(self, font=('Helvetica', xlarge_text_size), fg="white", bg="black", **FRAME_DEBUG)
         self.temperatureLbl.pack(side=TOP, anchor=W)
 
-        self.degreeFrm = Frame(self, bg="black")
+        self.degreeFrm = Frame(self, bg="black", **FRAME_DEBUG)
         self.degreeFrm.pack(side=TOP, anchor=W)
-        self.currentlyLbl = Label(self.degreeFrm, font=('Helvetica', medium_text_size), fg="white", bg="black")
+        
+        self.currentlyLbl = Label(self.degreeFrm, font=('Helvetica', medium_text_size), fg="white", bg="black", **FRAME_DEBUG)
         self.currentlyLbl.pack(side=LEFT, anchor=N)
-        self.iconLbl = Label(self.degreeFrm, bg="black")
+        
+        self.iconLbl = Label(self.degreeFrm, bg="black", **FRAME_DEBUG)
         self.iconLbl.pack(side=TOP, anchor=W, padx=10)
 
-        self.forecastLbl = Label(self, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.forecastLbl = Label(self, font=('Helvetica', small_text_size), fg="white", bg="black", **FRAME_DEBUG)
         self.forecastLbl.pack(side=TOP, anchor=W)
-        self.locationLbl = Label(self, font=('Helvetica', small_text_size), fg="white", bg="black")
+        
+        self.locationLbl = Label(self, font=('Helvetica', small_text_size), fg="white", bg="black", **FRAME_DEBUG)
         self.locationLbl.pack(side=TOP, anchor=W)
         self.get_weather()
 
         # Plot future Data
-        self.plot_frame = Frame(self, bg="black")
+        self.plot_frame = Frame(self, bg="black", **FRAME_DEBUG)
         self.plot_frame.pack(side=TOP, anchor=W)
         self.weather_data = None
         self.MakeForecastPlot()
@@ -341,9 +403,11 @@ class FullscreenWindow:
     def __init__(self):
         self.tk = Tk()
         self.tk.configure(background='black')
-        self.topFrame = Frame(self.tk, background='black')
-        self.bottomFrame = Frame(self.tk, background='black')
+        self.topFrame = Frame(self.tk, background='black', **FRAME_DEBUG)
+        self.topLeftFrame = Frame(self.topFrame, background='black', **FRAME_DEBUG)
+        self.bottomFrame = Frame(self.tk, background='black', **FRAME_DEBUG)
         self.topFrame.pack(side=TOP, fill=BOTH, expand=YES)
+        self.topLeftFrame.pack(side=LEFT, fill=BOTH, expand=YES)
         self.bottomFrame.pack(side=BOTTOM, fill=BOTH, expand=YES)
         self.state = False
 
@@ -353,11 +417,15 @@ class FullscreenWindow:
 
         # clock
         self.clock = Clock(self.topFrame)
-        self.clock.pack(side=RIGHT, anchor=N, padx=100, pady=60)
+        self.clock.pack(side=RIGHT, anchor=N, padx=50, pady=20)
 
         # weather
-        self.weather = Weather(self.topFrame)
-        self.weather.pack(side=LEFT, anchor=N, padx=100, pady=60)
+        self.weather = Weather(self.topLeftFrame)
+        self.weather.pack(side=TOP, anchor=N, padx=50, pady=20)
+
+        # surf
+        self.surf = Surf(self.topLeftFrame)
+        self.surf.pack(side=TOP, anchor=N, padx=50, pady=20)
 
         # news
         self.news = News(self.bottomFrame)
