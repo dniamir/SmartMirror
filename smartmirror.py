@@ -10,6 +10,7 @@ import requests
 import json
 import traceback
 import feedparser
+import numpy as np
 import os
 
 from PIL import Image, ImageTk
@@ -116,6 +117,13 @@ class Weather(Frame):
         self.location = ''
         self.currently = ''
         self.icon = ''
+        
+        # Initialize variables to later be updated
+        self.dummy_x = None
+        self.x_ticks = None
+        self.ax = None
+        self.canvas = None
+        self.fig = None
 
         self.temperatureLbl = Label(self, font=('Helvetica', xlarge_text_size), fg="white", bg="black")
         self.temperatureLbl.pack(side=TOP, anchor=W)
@@ -136,31 +144,71 @@ class Weather(Frame):
         # Plot future Data
         self.plot_frame = Frame(self, bg="black")
         self.plot_frame.pack(side=TOP, anchor=W)
-        self.dummy_y = [2, 2, 4, 4, 5, 4, 3]
-        self.MakeForecastPlot(self.dummy_y, side=BOTTOM, fill=BOTH)
+        self.weather_data = None
+        self.MakeForecastPlot()
 
-    def MakeForecastPlot(self, forecast_data_c, side, fill):
+    def MakeForecastPlot(self):
+        
+        first_time = self.canvas is None
+    
+        self.dummy_x = np.arange(0, 8, 1)
 
-        self.dummy_x = range(7)
-        fig = plt.figure(figsize=(5, 3), facecolor='black')
-        plt.plot(self.dummy_x, forecast_data_c, linewidth=2, markersize=6, color='white', markeredgecolor='white')
-        plt.gca().patch.set_facecolor('black')
-
-        plt.xticks(range(7), ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-                   rotation=45)
-        plt.gca().spines['bottom'].set_color('white')
-        plt.gca().tick_params(axis='x', colors='white')
-        plt.tight_layout()
-        canvas = FigureCanvasTkAgg(fig, self.plot_frame)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=side, fill=fill, expand=True)
+        weather_data = self.google_weather.GetDataFromRegion(weather_region)
+        if not (weather_data == self.weather_data):
+    
+            self.weather_data = weather_data
+        
+            min_temp = []
+            max_temp = []
+            ave_temp = []
+            weekdays = []
+            for dayweather in weather_data['next_days']:
+                min_temp += [dayweather['min_temp_c']]
+                max_temp += [dayweather['max_temp_c']]
+                ave_temp += [(max_temp[-1] + min_temp[-1]) / 2]
+                weekdays += [dayweather['name']]
+                print(max_temp)
+                print(min_temp)
+                print(weekdays)
+            
+            if first_time:
+                self.fig = plt.figure(figsize=(5, 3), facecolor='black')
+            else:
+                self.ax.clear()
+    
+            plt.plot(self.dummy_x, max_temp, linewidth=1, markersize=6, color='white', markeredgecolor='white', linestyle='--')
+            plt.plot(self.dummy_x, ave_temp, linewidth=2, markersize=6, color='white', markeredgecolor='white')
+            plt.plot(self.dummy_x, min_temp, linewidth=1, markersize=6, color='white', markeredgecolor='white', linestyle='--')
+            
+            self.ax = plt.gca()
+            ax = self.ax
+            ax.patch.set_facecolor('black')
+            
+            # Set ticks and tick labels
+            y_ticks = np.arange(np.min(min_temp), np.max(max_temp), 5)
+            plt.xticks(self.dummy_x, weekdays, rotation=45)
+            plt.yticks(y_ticks, y_ticks)
+            
+            ax.spines['bottom'].set_color('white')
+            ax.spines['left'].set_color('white')
+            ax.tick_params(axis='x', colors='white')
+            ax.tick_params(axis='y', colors='white')
+            
+            if first_time:
+                plt.tight_layout()
+                self.canvas = FigureCanvasTkAgg(self.fig, self.plot_frame)
+                self.canvas.get_tk_widget().pack(side=BOTTOM, fill=BOTH, expand=True)
+              
+            self.canvas.draw()
+        
+        self.after(1000, self.MakeForecastPlot)
 
     def get_weather(self):
         try:
 
             weather_data = self.google_weather.GetDataFromRegion(weather_region)
 
-            degree_sign= u'\N{DEGREE SIGN}'
+            degree_sign = u'\N{DEGREE SIGN}'
             temperature_c = weather_data['temp_c']
             currently2 = weather_data['weather_now'].title()
             forecast2 = None
@@ -210,7 +258,7 @@ class News(Frame):
     def __init__(self, parent, *args, **kwargs):
         Frame.__init__(self, parent, *args, **kwargs)
         self.config(bg='black')
-        self.title = 'News' # 'News' is more internationally generic
+        self.title = 'News'  # 'News' is more internationally generic
         self.newsLbl = Label(self, text=self.title, font=('Helvetica', medium_text_size), fg="white", bg="black")
         self.newsLbl.pack(side=TOP, anchor=W)
         self.headlinesContainer = Frame(self, bg="black")
