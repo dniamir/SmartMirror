@@ -257,6 +257,7 @@ class Weather(Frame):
             ax.tick_params(axis='y', colors='white')
             
             if first_time:
+                plt.title('Temperature Forecast [degC]', color='white', fontsize=12)
                 plt.tight_layout()
                 self.canvas = FigureCanvasTkAgg(self.fig, self.plot_frame)
                 self.canvas.get_tk_widget().pack(side=BOTTOM, fill=BOTH, expand=True)
@@ -417,15 +418,15 @@ class FullscreenWindow:
 
         # clock
         self.clock = Clock(self.topFrame)
-        self.clock.pack(side=RIGHT, anchor=N, padx=50, pady=20)
+        self.clock.pack(side=RIGHT, anchor=N, padx=10, pady=20)
 
         # weather
         self.weather = Weather(self.topLeftFrame)
-        self.weather.pack(side=TOP, anchor=N, padx=50, pady=20)
+        self.weather.pack(side=TOP, anchor=W, padx=10, pady=20)
 
         # surf
         self.surf = Surf(self.topLeftFrame)
-        self.surf.pack(side=TOP, anchor=N, padx=50, pady=20)
+        self.surf.pack(side=TOP, anchor=W, padx=10, pady=0)
 
         # news
         self.news = News(self.bottomFrame)

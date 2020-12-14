@@ -140,41 +140,35 @@ class SurflineScraper(object):
 		x = np.arange(0, len(weekdays), 1)
 		x_labels = ['12AM', '6AM', '12PM', '6PM'] * days
 		
-		plt.figure(figsize=(15, 7))
-		
 		for i in range(days):
 			x_data = x[i * points_per_day:(i + 1) * points_per_day]
 			y_data = wave_avg_height[i * points_per_day:(i + 1) * points_per_day]
 			diff_data = diff[i * points_per_day:(i + 1) * points_per_day]
 			
-			rects = plt.bar(x=x_data, height=y_data, width=1, yerr=diff_data,
+			rects = plt.bar(x=x_data, height=y_data, width=1,
 			                edgecolor='black')
 			
 			# Draw red vertical lines
-			if i != days - 1:
-				plt.axvline(x_data[-1] + 0.5, color='red', markersize=0, linestyle='--',
-				            linewidth=3)
+			# if i != days - 1:
+			# 	plt.axvline(x_data[-1] + 0.5, color='red', markersize=0, linestyle='--',
+			# 	            linewidth=3)
 			
-			# Annotate Bars
-			for rect in rects:
-				height = rect.get_height()
-				plt.gca().annotate('%.1f' % height,
-				                   xy=(rect.get_x() + rect.get_width() / 2, height + 1),
-				                   xytext=(0, 3),  # 3 points vertical offset
-				                   textcoords="offset points",
-				                   ha='center', va='bottom', fontsize=12)
-			
-			# Add Weekday Labels
-			plt.gca().text(x=np.mean(x_data) - 1, y=np.max(wave_max_height) + 1.5,
-			               s=weekdays[i], fontsize=20)
+			# # Annotate Bars
+			# for rect in rects:
+			# 	height = rect.get_height()
+			# 	plt.gca().annotate('%.1f' % height,
+			# 	                   xy=(rect.get_x() + rect.get_width() / 2, height + 1),
+			# 	                   xytext=(0, 3),  # 3 points vertical offset
+			# 	                   textcoords="offset points",
+			# 	                   ha='center', va='bottom', fontsize=12, color='white')
+			#
+			# # Add Weekday Labels
+			# plt.gca().text(x=np.mean(x_data) - 1, y=np.max(wave_max_height) + 1.5,
+			#                s=weekdays[i], fontsize=20, color='white')
 		
 		plt.gca().yaxis.grid(True)
-		_ = plt.xticks(ticks=x, labels=x_labels, rotation=30, fontsize=14)
-		_ = plt.yticks(fontsize=14)
+		_ = plt.xticks(ticks=x[::2], labels=x_labels[::2], rotation=30, fontsize=10)
 		plt.xlabel('Time [HR]', fontsize=18)
 		plt.ylabel('Wave Size [ft]', fontsize=18)
-		plt.title('Wave Size over 6 day Period at %s' % location, fontsize=28)
-		
-		(min_y, max_y) = plt.ylim()
-		plt.ylim([min_y, max_y + 2])
+		plt.title('%s Surf Report [Ft]' % location.replace('_', ' ').title(), fontsize=12, color='white')
 	
