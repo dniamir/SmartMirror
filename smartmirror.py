@@ -23,6 +23,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from GoogleWeather.GoogleWeather import GoogleWeatherAPI
 from SurflineScrapper.SurflineScraper import SurflineScraper
+from iWindsurfScraper.iWindsurfScraper import iWindsurfScraper
 
 LOCALE_LOCK = threading.Lock()
 
@@ -32,13 +33,19 @@ date_format = "%b %d, %Y" # check python doc for strftime() for options
 news_country_code = 'us'
 weather_region = 'Redwood City'
 surf_region = 'OCEAN_BEACH_OVERVIEW'
+# wind_locations = ['3Rd AVE CHANNEL', 'Anita Rock-Crissy Field', 'Palo Alto', 'Coyote Point']
+wind_locations = ['3RD AVE CHANNEL']
 xlarge_text_size = 50
 large_text_size = 48
 medium_text_size = 28
 small_text_size = 12
 
-FRAME_DEBUG = {'highlightbackground': "white",
-               'highlightthickness': 1}
+# FRAME_DEBUG = {'highlightbackground': "white",
+#                'highlightthickness': 1}
+
+FRAME_DEBUG = {'highlightbackground': None,
+               'highlightthickness': 0}
+
 
 @contextmanager
 def setlocale(name): #thread proof function to work with locale
@@ -134,10 +141,15 @@ class Surf(Frame):
         self.MakeForecastPlot()
     
     def MakeForecastPlot(self):
-        
+        print('Making Surf Forecast')
         first_time = self.canvas is None
                 
         surf_data = self.surfline.GetData(surf_region)
+        
+        if not first_time:
+            if np.average(surf_data['Wave Avg Height [ft]'].values) == np.average(self.surf_data['Wave Avg Height [ft]'].values):
+                self.after(10000, self.MakeForecastPlot)
+                return
         
         self.surf_data = surf_data
         
@@ -164,7 +176,69 @@ class Surf(Frame):
                                              expand=True)
         
         self.canvas.draw()
-        self.after(600000, self.MakeForecastPlot)
+        self.after(10000, self.MakeForecastPlot)
+
+
+class Wind(Frame):
+    def __init__(self, parent, *args, **kwargs):
+        Frame.__init__(self, parent, bg='black', **FRAME_DEBUG)
+        self.iwindsurf = iWindsurfScraper()
+        self.temperature = ''
+        self.icon = ''
+        
+        # Initialize variables to later be updated
+        self.dummy_x = None
+        self.x_ticks = None
+        self.ax = None
+        self.canvas = None
+        self.fig = None
+        
+        # Plot future Data
+        self.plot_frame = Frame(self, bg="black", **FRAME_DEBUG)
+        self.plot_frame.pack(side=TOP, anchor=W)
+        self.wind_data = None
+        self.wind_loc_index = 0
+        self.MakeForecastPlot()
+    
+    def MakeForecastPlot(self):
+        print('Making WindSurf Forecast')
+        first_time = self.canvas is None
+        location_idx = self.wind_loc_index
+        location = wind_locations[location_idx]
+        wind_data = self.iwindsurf.GetData(location)
+        
+        if not first_time:
+            if np.average(wind_data['Wind Speed [mph]'].values) == np.average(self.wind_data['Wind Speed [mph]'].values):
+                self.after(10000, self.MakeForecastPlot)
+                return
+
+        self.wind_data = wind_data
+        
+        if first_time:
+            self.fig = plt.figure(figsize=(5, 3), facecolor='black')
+        else:
+            self.ax.clear()
+        
+        self.iwindsurf.PlotWindForecast(location)
+        
+        self.ax = plt.gca()
+        ax = self.ax
+        ax.patch.set_facecolor('black')
+
+        ax.spines['bottom'].set_color('white')
+        ax.spines['left'].set_color('white')
+        ax.tick_params(axis='x', colors='white')
+        ax.tick_params(axis='y', colors='white')    
+        
+        if first_time:
+            plt.tight_layout()
+            self.canvas = FigureCanvasTkAgg(self.fig, self.plot_frame)
+            self.canvas.get_tk_widget().pack(side=BOTTOM, fill=BOTH,
+                                             expand=True)
+        
+        self.canvas.draw()
+        self.wind_loc_index = np.remainder(self.wind_loc_index + 1, len(wind_locations))
+        self.after(10000, self.MakeForecastPlot)
 
 
 class Weather(Frame):
@@ -229,9 +303,6 @@ class Weather(Frame):
                 max_temp += [dayweather['max_temp_c']]
                 ave_temp += [(max_temp[-1] + min_temp[-1]) / 2]
                 weekdays += [dayweather['name']]
-                print(max_temp)
-                print(min_temp)
-                print(weekdays)
             
             if first_time:
                 self.fig = plt.figure(figsize=(5, 3), facecolor='black')
@@ -264,7 +335,7 @@ class Weather(Frame):
               
             self.canvas.draw()
         
-        self.after(1000, self.MakeForecastPlot)
+        self.after(20000, self.MakeForecastPlot)
 
     def get_weather(self):
         try:
@@ -420,13 +491,17 @@ class FullscreenWindow:
         self.clock = Clock(self.topFrame)
         self.clock.pack(side=RIGHT, anchor=N, padx=10, pady=20)
 
-        # weather
+        # # weather
         self.weather = Weather(self.topLeftFrame)
         self.weather.pack(side=TOP, anchor=W, padx=10, pady=20)
 
         # surf
         self.surf = Surf(self.topLeftFrame)
         self.surf.pack(side=TOP, anchor=W, padx=10, pady=0)
+
+        # wind
+        self.wind = Wind(self.topLeftFrame)
+        self.wind.pack(side=TOP, anchor=W, padx=10, pady=0)
 
         # news
         self.news = News(self.bottomFrame)

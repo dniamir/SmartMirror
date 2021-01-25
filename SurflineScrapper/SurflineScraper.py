@@ -168,7 +168,7 @@ class SurflineScraper(object):
 		
 		plt.gca().yaxis.grid(True)
 		_ = plt.xticks(ticks=x[::2], labels=x_labels[::2], rotation=30, fontsize=10)
-		plt.xlabel('Time [HR]', fontsize=18)
-		plt.ylabel('Wave Size [ft]', fontsize=18)
+		# plt.xlabel('Time [HR]', fontsize=18)
+		# plt.ylabel('Wave Size [ft]', fontsize=18)
 		plt.title('%s Surf Report [Ft]' % location.replace('_', ' ').title(), fontsize=12, color='white')
 	
