@@ -1,5 +1,7 @@
 # Smart-Mirror
 Raspberry powered mirror which can display the news, weather, and time.
+Originally created by the Hacker Shack
+Modifications made by dniamir with included functionality to plot the surf, windsurf, and Google weather reports
 
 ## Installation and Updating
 ### Code
@@ -44,7 +46,3 @@ To run the application run the following command in this folder
 ```
 python smartmirror.py
 ```
-
-## Demo and Build Instructions 
-(click image for link to video)
-[![Link to youtube how-to video](http://i.imgur.com/cMyaSHT.png)](https://youtu.be/fkVBAcvbrjU)
