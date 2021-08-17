@@ -117,7 +117,7 @@ class Clock(Frame):
             # calls itself every 200 milliseconds
             # to update the time display as needed
             # could use >200 ms, but display gets jerky
-                self.timeLbl.after(200, self.tick)
+            self.timeLbl.after(1000, self.tick)
 
 
 class Surf(Frame):
@@ -156,11 +156,12 @@ class Surf(Frame):
         if first_time:
             self.fig = plt.figure(figsize=(5, 3), facecolor='black')
         else:
-            self.ax.clear()
-        
+            self.fig.gca().clear()
+
+        plt.figure(self.fig.number)
         self.surfline.PlotSurfResults(surf_region)
         
-        self.ax = plt.gca()
+        self.ax = self.fig.gca()
         ax = self.ax
         ax.patch.set_facecolor('black')
 
@@ -176,7 +177,7 @@ class Surf(Frame):
                                              expand=True)
         
         self.canvas.draw()
-        self.after(10000, self.MakeForecastPlot)
+        self.after(200000, self.MakeForecastPlot)
 
 
 class Wind(Frame):
@@ -217,11 +218,12 @@ class Wind(Frame):
         if first_time:
             self.fig = plt.figure(figsize=(5, 3), facecolor='black')
         else:
-            self.ax.clear()
-        
+            self.fig.gca().clear()
+
+        plt.figure(self.fig.number)
         self.iwindsurf.PlotWindForecast(location)
         
-        self.ax = plt.gca()
+        self.ax = self.fig.gca()
         ax = self.ax
         ax.patch.set_facecolor('black')
 
@@ -238,7 +240,7 @@ class Wind(Frame):
         
         self.canvas.draw()
         self.wind_loc_index = np.remainder(self.wind_loc_index + 1, len(wind_locations))
-        self.after(10000, self.MakeForecastPlot)
+        self.after(200000, self.MakeForecastPlot)
 
 
 class Weather(Frame):
@@ -252,11 +254,17 @@ class Weather(Frame):
         self.icon = ''
         
         # Initialize variables to later be updated
+        self.weather_data = None
         self.dummy_x = None
         self.x_ticks = None
         self.ax = None
         self.canvas = None
         self.fig = None
+
+        # Weather debug
+        # self.weather_data = np.array([10, 10, 11, 11, 12, 9, 8, 8])
+        # self.weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
+        #                  'Saturday', 'Sunday', 'Monday']
 
         self.temperatureLbl = Label(self, font=('Helvetica', xlarge_text_size), fg="white", bg="black", **FRAME_DEBUG)
         self.temperatureLbl.pack(side=TOP, anchor=W)
@@ -280,7 +288,6 @@ class Weather(Frame):
         # Plot future Data
         self.plot_frame = Frame(self, bg="black", **FRAME_DEBUG)
         self.plot_frame.pack(side=TOP, anchor=W)
-        self.weather_data = None
         self.MakeForecastPlot()
 
     def MakeForecastPlot(self):
@@ -290,7 +297,10 @@ class Weather(Frame):
         self.dummy_x = np.arange(0, 8, 1)
 
         weather_data = self.google_weather.GetDataFromRegion(weather_region)
+        # weather_data = np.append(self.weather_data[1:], self.weather_data[0])
+        # self.weekdays = self.weekdays[1:] + [self.weekdays[0]]
         if not (weather_data == self.weather_data):
+        # if True:
     
             self.weather_data = weather_data
         
@@ -304,16 +314,24 @@ class Weather(Frame):
                 ave_temp += [(max_temp[-1] + min_temp[-1]) / 2]
                 weekdays += [dayweather['name']]
             
+            # for idx, num in enumerate(self.weather_data):
+            #     min_temp += [num-1]
+            #     max_temp += [num+1]
+            #     ave_temp += [num]
+            #     weekdays += [self.weekdays[idx]]
+            
             if first_time:
                 self.fig = plt.figure(figsize=(5, 3), facecolor='black')
             else:
-                self.ax.clear()
+                self.fig.gca().clear()
+
+            plt.figure(self.fig.number)
     
             plt.plot(self.dummy_x, max_temp, linewidth=1, markersize=6, color='white', markeredgecolor='white', linestyle='--')
             plt.plot(self.dummy_x, ave_temp, linewidth=2, markersize=6, color='white', markeredgecolor='white')
             plt.plot(self.dummy_x, min_temp, linewidth=1, markersize=6, color='white', markeredgecolor='white', linestyle='--')
             
-            self.ax = plt.gca()
+            self.ax = self.fig.gca()
             ax = self.ax
             ax.patch.set_facecolor('black')
             
@@ -335,7 +353,7 @@ class Weather(Frame):
               
             self.canvas.draw()
         
-        self.after(20000, self.MakeForecastPlot)
+        self.after(200000, self.MakeForecastPlot)
 
     def get_weather(self):
         try:
