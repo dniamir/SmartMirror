@@ -1,3 +1,6 @@
 [submodule "iWindsurf-Scraper"]
 	path = iWindsurf-Scraper
 	url = https://github.com/dniamir/iWindsurf-Scraper
+[submodule "Surfline-Scraper"]
+	path = Surfline-Scraper
+	url = https://github.com/dniamir/Surfline-Scraper
