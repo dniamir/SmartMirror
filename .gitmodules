@@ -1,0 +1,3 @@
+[submodule "iWindsurf-Scraper"]
+	path = iWindsurf-Scraper
+	url = https://github.com/dniamir/iWindsurf-Scraper
