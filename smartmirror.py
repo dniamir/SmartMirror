@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from GoogleWeather.GoogleWeather import GoogleWeatherAPI
-from SurflineScrapper.SurflineScraper import SurflineScraper
+from SurflineScraper.SurflineScraper import SurflineScraper
 from iWindsurfScraper.iWindsurfScraper import iWindsurfScraper
 
 LOCALE_LOCK = threading.Lock()
