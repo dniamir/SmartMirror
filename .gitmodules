@@ -1,9 +1,9 @@
-[submodule "iWindsurf-Scraper"]
-	path = iWindsurf-Scraper
-	url = https://github.com/dniamir/iWindsurf-Scraper
-[submodule "iWindsurfScraper"]
-	path = iWindsurfScraper
-	url = https://github.com/dniamir/iWindsurfScraper
 [submodule "SurflineScraper"]
 	path = SurflineScraper
 	url = https://github.com/dniamir/SurflineScraper
+[submodule "GoogleWeather"]
+	path = GoogleWeather
+	url = https://github.com/dniamir/GoogleWeather
+[submodule "iWindsurf-Scraper"]
+	path = iWindsurf-Scraper
+	url = https://github.com/dniamir/iWindsurf-Scraper
