@@ -4,3 +4,6 @@
 [submodule "GoogleWeather"]
 	path = GoogleWeather
 	url = https://github.com/dniamir/GoogleWeather
+[submodule "iWindsurfScraper"]
+	path = iWindsurfScraper
+	url = https://github.com/dniamir/iWindsurfScraper
